@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>KU Bab-Yak Map</title>
+    
+    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=2b1saeqvi9"></script>
+    
+    <style>
+        /* 지도가 화면에 꽉 차게 설정 */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        #map { width: 100%; height: 100%; }
+        
+        /* 말풍선 스타일 (선택사항) */
+        .info-window {
+            padding: 10px;
+            min-width: 120px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    // 1. URL에서 파라미터 값을 가져오는 함수
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    // 2. 중심 좌표 가져오기 (값이 없으면 고대 정문이 기본값)
+    // FlutterFlow에서 ChoiceChips 선택에 따라 이 lat, lng 값이 바뀝니다.
+    const centerLat = parseFloat(getQueryParam('lat')) || 37.5894;
+    const centerLng = parseFloat(getQueryParam('lng')) || 127.0323;
+
+    // 3. 지도 생성
+    var mapOptions = {
+        center: new naver.maps.LatLng(centerLat, centerLng),
+        zoom: 17, // 학교 근처 식당이 잘 보이게 줌 레벨 조정
+        scaleControl: false,
+        logoControl: false,
+        mapDataControl: false,
+        zoomControl: false // 모바일에서는 줌 버튼 없는 게 더 깔끔함
+    };
+
+    var map = new naver.maps.Map('map', mapOptions);
+
+    // 4. 마커(식당) 데이터 파싱 및 표시
+    // FlutterFlow에서 넘겨준 JSON 문자열을 받습니다.
+    const markersParam = getQueryParam('markers');
+
+    if (markersParam) {
+        try {
+            // URL 인코딩된 문자열을 풀고 JSON으로 변환
+            const markerList = JSON.parse(decodeURIComponent(markersParam));
+            
+            // 데이터 갯수만큼 반복해서 마커 찍기
+            markerList.forEach(function(store) {
+                // lat, lng가 정상적으로 있는 경우에만 생성
+                if (store.lat && store.lng) {
+                    var marker = new naver.maps.Marker({
+                        position: new naver.maps.LatLng(store.lat, store.lng),
+                        map: map,
+                        title: store.name
+                        // icon: 만약 커스텀 이미지를 쓰고 싶으면 여기에 설정
+                    });
+
+                    // 마커 클릭 시 식당 이름 보여주기 (InfoWindow)
+                    var contentString = '<div class="info-window">' + store.name + '</div>';
+
+                    var infoWindow = new naver.maps.InfoWindow({
+                        content: contentString,
+                        borderWidth: 0,
+                        backgroundColor: "transparent",
+                        disableAnchor: true,
+                        pixelOffset: new naver.maps.Point(0, -10) 
+                    });
+
+                    naver.maps.Event.addListener(marker, "click", function(e) {
+                        if (infoWindow.getMap()) {
+                            infoWindow.close();
+                        } else {
+                            infoWindow.open(map, marker);
+                        }
+                    });
+                }
+            });
+
+        } catch (e) {
+            console.error("마커 데이터를 읽는 중 오류가 발생했습니다:", e);
+            // 에러가 나도 지도는 뜨니까 걱정 마세요.
+        }
+    }
+</script>
+
+</body>
+</html>
