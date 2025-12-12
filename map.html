@@ -7,7 +7,6 @@
     <style>
         body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
         
-        /* 정보창 스타일 */
         .iw_inner { padding: 10px; min-width: 140px; text-align: center; }
         .iw_title { font-weight: bold; font-size: 15px; color: #333; margin-bottom: 5px; }
         .iw_category { 
@@ -21,39 +20,43 @@
 <body>
 <div id="map"></div>
 <script>
-    // 1. 파라미터 읽기
     const urlParams = new URLSearchParams(window.location.search);
     const lat = parseFloat(urlParams.get('lat')) || 37.5894;
     const lng = parseFloat(urlParams.get('lng')) || 127.0323;
     const markersParam = urlParams.get('markers');
 
-    // 2. 지도 생성
     var map = new naver.maps.Map('map', {
         center: new naver.maps.LatLng(lat, lng),
         zoom: 17
     });
 
-    // 3. 마커 및 카테고리 표시
     if (markersParam) {
         try {
-            // 데이터 파싱 (URL 디코딩 필수)
             var decodedData = decodeURIComponent(markersParam);
             var markerList = JSON.parse(decodedData);
             
             if (Array.isArray(markerList)) {
                 markerList.forEach(function(store) {
                     if (store.lat && store.lng) {
-                        // 마커 생성
-                        var marker = new naver.maps.Marker({
+                        
+                        // ▼▼▼ [핵심] 빨간색 마커 이미지 설정 ▼▼▼
+                        var markerOptions = {
                             position: new naver.maps.LatLng(store.lat, store.lng),
                             map: map,
-                            title: store.name
-                        });
+                            title: store.name,
+                            icon: {
+                                // 구글의 빨간색 핀 이미지 사용 (안정적임)
+                                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                                size: new naver.maps.Size(32, 32),
+                                scaledSize: new naver.maps.Size(32, 32),
+                                origin: new naver.maps.Point(0, 0),
+                                anchor: new naver.maps.Point(16, 32)
+                            }
+                        };
 
-                        // 카테고리 표시 (없으면 '식당')
+                        var marker = new naver.maps.Marker(markerOptions);
+
                         var categoryHtml = store.category ? '<div class="iw_category">' + store.category + '</div>' : '';
-                        
-                        // 정보창 내용 구성
                         var contentString = 
                             '<div class="iw_inner">' +
                             '   <div class="iw_title">' + store.name + '</div>' +
@@ -68,7 +71,6 @@
                             pixelOffset: new naver.maps.Point(0, -10)
                         });
 
-                        // 클릭 이벤트
                         naver.maps.Event.addListener(marker, "click", function(e) {
                             if (infoWindow.getMap()) {
                                 infoWindow.close();
@@ -80,7 +82,7 @@
                 });
             }
         } catch (e) {
-            console.error("마커 데이터 오류:", e);
+            console.error("Marker Error:", e);
         }
     }
 </script>
