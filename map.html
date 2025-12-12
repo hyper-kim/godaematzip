@@ -7,11 +7,29 @@
     <style>
         body, html, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
         
-        .iw_inner { padding: 10px; min-width: 140px; text-align: center; }
-        .iw_title { font-weight: bold; font-size: 15px; color: #333; margin-bottom: 5px; }
+        /* 정보창(말풍선) 스타일 - 더 깔끔하게 다듬음 */
+        .iw_wrap {
+            padding: 12px 16px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            text-align: center;
+            min-width: 140px;
+        }
+        .iw_title { 
+            font-weight: 700; 
+            font-size: 16px; 
+            color: #222; 
+            margin-bottom: 6px; 
+            letter-spacing: -0.5px;
+        }
         .iw_category { 
-            font-size: 12px; color: #fff; background-color: #ff5a5a; 
-            padding: 3px 8px; border-radius: 10px; display: inline-block; 
+            font-size: 11px; 
+            color: #fff; 
+            padding: 4px 10px; 
+            border-radius: 20px; 
+            display: inline-block; 
+            font-weight: 600;
         }
     </style>
     
@@ -25,10 +43,27 @@
     const lng = parseFloat(urlParams.get('lng')) || 127.0323;
     const markersParam = urlParams.get('markers');
 
+    // 지도 옵션 (더 부드럽게)
     var map = new naver.maps.Map('map', {
         center: new naver.maps.LatLng(lat, lng),
-        zoom: 17
+        zoom: 17,
+        scaleControl: false,
+        logoControl: false,
+        mapDataControl: false,
+        zoomControl: false // 줌 버튼 숨김 (모바일 앱 느낌)
     });
+
+    // 카테고리별 색상 지정 함수
+    function getCategoryColor(category) {
+        if (!category) return '#333333';
+        if (category.includes('한식')) return '#FF4B4B'; // 빨강
+        if (category.includes('중식')) return '#FFC400'; // 노랑
+        if (category.includes('일식') || category.includes('회')) return '#4A90E2'; // 파랑
+        if (category.includes('양식') || category.includes('파스타')) return '#27AE60'; // 초록
+        if (category.includes('분식')) return '#FF8A00'; // 주황
+        if (category.includes('카페') || category.includes('디저트')) return '#8E44AD'; // 보라
+        return '#333333'; // 기본 검정
+    }
 
     if (markersParam) {
         try {
@@ -39,36 +74,79 @@
                 markerList.forEach(function(store) {
                     if (store.lat && store.lng) {
                         
-                        // ▼▼▼ [핵심] 빨간색 마커 이미지 설정 ▼▼▼
-                        var markerOptions = {
+                        var color = getCategoryColor(store.category);
+
+                        // ▼▼▼ [핵심] CSS로 그린 고해상도 마커 ▼▼▼
+                        // (물방울 모양 + 그림자 + 가운데 흰 점)
+                        var markerHtml = `
+                            <div style="
+                                position: relative;
+                                width: 34px; 
+                                height: 42px;
+                            ">
+                                <div style="
+                                    position: absolute;
+                                    top: 0; left: 0;
+                                    width: 34px; height: 34px;
+                                    background-color: ${color};
+                                    border-radius: 50%;
+                                    border: 3px solid white;
+                                    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+                                    box-sizing: border-box;
+                                    z-index: 2;
+                                "></div>
+                                <div style="
+                                    position: absolute;
+                                    bottom: 0; left: 50%;
+                                    transform: translateX(-50%);
+                                    width: 0; height: 0;
+                                    border-left: 8px solid transparent;
+                                    border-right: 8px solid transparent;
+                                    border-top: 12px solid ${color};
+                                    z-index: 1;
+                                    margin-bottom: 3px;
+                                "></div>
+                                <div style="
+                                    position: absolute;
+                                    top: 11px; left: 11px;
+                                    width: 6px; height: 6px;
+                                    background-color: white;
+                                    border-radius: 50%;
+                                    z-index: 3;
+                                "></div>
+                            </div>
+                        `;
+
+                        var marker = new naver.maps.Marker({
                             position: new naver.maps.LatLng(store.lat, store.lng),
                             map: map,
                             title: store.name,
+                            // 이미지가 아니라 HTML 코드를 아이콘으로 씁니다
                             icon: {
-                                // 구글의 빨간색 핀 이미지 사용 (안정적임)
-                                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                                size: new naver.maps.Size(32, 32),
-                                scaledSize: new naver.maps.Size(32, 32),
-                                origin: new naver.maps.Point(0, 0),
-                                anchor: new naver.maps.Point(16, 32)
+                                content: markerHtml,
+                                size: new naver.maps.Size(34, 42),
+                                anchor: new naver.maps.Point(17, 42) // 꼬리 끝부분이 좌표에 닿게
                             }
-                        };
+                        });
 
-                        var marker = new naver.maps.Marker(markerOptions);
+                        // 정보창 디자인 적용
+                        var categoryHtml = store.category ? 
+                            `<div class="iw_category" style="background-color:${color}">${store.category}</div>` : '';
+                        
+                        var contentString = `
+                            <div class="iw_wrap">
+                                <div class="iw_title">${store.name}</div>
+                                ${categoryHtml}
+                            </div>
+                        `;
 
-                        var categoryHtml = store.category ? '<div class="iw_category">' + store.category + '</div>' : '';
-                        var contentString = 
-                            '<div class="iw_inner">' +
-                            '   <div class="iw_title">' + store.name + '</div>' +
-                             categoryHtml +
-                            '</div>';
-
+                        // 네이버 기본 테두리 없애고 커스텀 스타일 적용
                         var infoWindow = new naver.maps.InfoWindow({
                             content: contentString,
-                            borderWidth: 1,
-                            borderColor: "#ccc",
-                            backgroundColor: "#fff",
-                            pixelOffset: new naver.maps.Point(0, -10)
+                            borderWidth: 0, 
+                            backgroundColor: "transparent",
+                            disableAnchor: true, // 말풍선 꼬리 제거 (깔끔하게)
+                            pixelOffset: new naver.maps.Point(0, -15)
                         });
 
                         naver.maps.Event.addListener(marker, "click", function(e) {
@@ -82,7 +160,7 @@
                 });
             }
         } catch (e) {
-            console.error("Marker Error:", e);
+            console.error("Map Error:", e);
         }
     }
 </script>
