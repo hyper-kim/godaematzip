@@ -15,6 +15,10 @@
 <body>
 <div id="map"></div>
 <script>
+    // ▼▼▼ URL 텍스트 조합된 거 받아오기 (?data=...) ▼▼▼
+    const urlParams = new URLSearchParams(window.location.search);
+    const markersParam = urlParams.get('data'); 
+    
     var map = new naver.maps.Map('map', {
         center: new naver.maps.LatLng(37.5894, 127.0323),
         zoom: 16,
@@ -23,16 +27,6 @@
 
     var bounds = new naver.maps.LatLngBounds();
     var validMarkers = [];
-
-    // ▼▼▼ [핵심 수정] 데이터를 '#' 뒤에서 가져옵니다 (서버 전송 방지) ▼▼▼
-    // 예: map.html#data=[...] 형태가 됩니다.
-    var rawHash = window.location.hash;
-    var markersParam = "";
-    
-    if (rawHash && rawHash.indexOf('data=') !== -1) {
-        // #data=... 부분에서 값만 추출
-        markersParam = rawHash.substring(rawHash.indexOf('data=') + 5);
-    }
 
     function getCategoryColor(c) {
         if (!c) return '#333';
@@ -52,6 +46,7 @@
 
             if (Array.isArray(markerList) && markerList.length > 0) {
                 markerList.forEach(function(s) {
+                    // 압축된 변수명 (a:위도, o:경도, n:이름, c:카테고리)
                     if (s.a && s.o && s.a !== 0 && s.o !== 0) {
                         var position = new naver.maps.LatLng(s.a, s.o);
                         bounds.extend(position);
